@@ -1,0 +1,3979 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>AMR 50 Games - 3D</title>
+
+<style>
+*{
+    box-sizing:border-box;
+    margin:0;
+    padding:0;
+}
+
+body{
+    overflow:hidden;
+    background:#000;
+    font-family:Arial,sans-serif;
+}
+
+canvas{
+    display:block;
+}
+
+#menu{
+    position:fixed;
+    inset:0;
+    z-index:100;
+    overflow:auto;
+    color:white;
+    padding:30px;
+    background:
+      radial-gradient(circle at 50% 0%,#31558d,#070b12 65%);
+}
+
+.logo{
+    text-align:center;
+    font-size:55px;
+    font-weight:900;
+    letter-spacing:5px;
+}
+
+.subtitle{
+    text-align:center;
+    color:#b9c7dc;
+    margin:10px 0 30px;
+}
+
+.games{
+    max-width:1250px;
+    margin:auto;
+    display:grid;
+    grid-template-columns:
+      repeat(auto-fit,minmax(210px,1fr));
+    gap:14px;
+}
+
+.card{
+    min-height:140px;
+    padding:18px;
+    border-radius:16px;
+    cursor:pointer;
+    border:1px solid #ffffff25;
+    background:
+      linear-gradient(145deg,#1c2d47,#0b111b);
+    transition:.2s;
+}
+
+.card:hover{
+    transform:translateY(-6px);
+    border-color:#66b5ff;
+    box-shadow:0 15px 35px #000;
+}
+
+.number{
+    color:#7387a5;
+    font-size:12px;
+}
+
+.card h2{
+    margin-top:9px;
+    font-size:18px;
+}
+
+.category{
+    color:#83b8ff;
+    font-size:13px;
+    margin-top:8px;
+}
+
+#hud{
+    display:none;
+    position:fixed;
+    inset:0;
+    z-index:20;
+    pointer-events:none;
+    color:white;
+}
+
+.panel{
+    background:#000b;
+    border:1px solid #ffffff25;
+    border-radius:12px;
+    padding:12px 16px;
+    backdrop-filter:blur(5px);
+}
+
+#top{
+    position:absolute;
+    left:15px;
+    right:15px;
+    top:15px;
+    display:flex;
+    justify-content:space-between;
+}
+
+#mission{
+    position:absolute;
+    top:85px;
+    left:50%;
+    transform:translateX(-50%);
+    min-width:300px;
+    text-align:center;
+}
+
+#controls{
+    position:absolute;
+    left:15px;
+    bottom:15px;
+    line-height:1.5;
+}
+
+#back{
+    position:absolute;
+    right:15px;
+    bottom:15px;
+    pointer-events:auto;
+    border:0;
+    border-radius:10px;
+    padding:12px 20px;
+    cursor:pointer;
+}
+
+#crosshair{
+    position:absolute;
+    top:50%;
+    left:50%;
+    transform:translate(-50%,-50%);
+    font-size:26px;
+}
+
+#message{
+    position:absolute;
+    bottom:130px;
+    left:50%;
+    transform:translateX(-50%);
+}
+
+#minimap{
+    position:absolute;
+    top:75px;
+    right:15px;
+    width:170px;
+    height:170px;
+    border:2px solid white;
+    border-radius:50%;
+}
+
+#loading{
+    position:fixed;
+    inset:0;
+    z-index:200;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    background:#05080d;
+    color:white;
+    font-size:25px;
+}
+</style>
+</head>
+
+<body>
+
+<div id="loading">
+    Loading 3D world...
+</div>
+
+<!-- =====================================================
+                         GAME MENU
+===================================================== -->
+
+<div id="menu">
+
+    <div class="logo">
+        AMR GAMES
+    </div>
+
+    <div class="subtitle">
+        50 DIFFERENT 3D GAME WORLDS
+    </div>
+
+    <div class="games" id="gameList"></div>
+
+</div>
+
+
+<!-- =====================================================
+                           HUD
+===================================================== -->
+
+<div id="hud">
+
+    <div id="top">
+
+        <div class="panel">
+            <b id="gameTitle">AMR GAME</b><br>
+            Score:
+            <span id="score">0</span>
+            &nbsp; | &nbsp;
+            ❤️
+            <span id="health">100</span>
+            &nbsp; | &nbsp;
+            ⭐
+            <span id="level">1</span>
+        </div>
+
+        <div class="panel">
+            🚗
+            <span id="vehicleState">
+                ON FOOT
+            </span>
+        </div>
+
+    </div>
+
+    <div id="mission" class="panel">
+        <span id="missionText">
+            Mission
+        </span>
+    </div>
+
+    <div id="message" class="panel">
+        Ready
+    </div>
+
+    <div id="crosshair">
+        +
+    </div>
+
+    <canvas id="minimap"></canvas>
+
+    <div id="controls" class="panel">
+        <b>CONTROLS</b><br>
+        W A S D / ARROWS — Move<br>
+        SHIFT — Run / Boost<br>
+        SPACE — Jump<br>
+        E — Enter vehicle<br>
+        M — New mission<br>
+        Mouse — Look
+    </div>
+
+    <button id="back" onclick="backToMenu()">
+        BACK TO MENU
+    </button>
+
+</div>
+
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+
+<script>
+
+/* =====================================================
+                    50 GAME DEFINITIONS
+===================================================== */
+
+const GAMES = [
+
+["Metro Runner","RUNNER","🌆"],
+["Sky Jumper","PLATFORM","☁️"],
+["Street Racer","RACING","🏎️"],
+["Desert Rally","DESERT","🏜️"],
+["Snow Racer","SNOW","❄️"],
+["Ocean Boat","OCEAN","🌊"],
+["Space Pilot","SPACE","🚀"],
+["Galaxy Defender","GALAXY","🌌"],
+["Asteroid Dodge","ASTEROID","☄️"],
+["Moon Explorer","MOON","🌕"],
+
+["Football Stadium","FOOTBALL","⚽"],
+["Basketball Arena","BASKETBALL","🏀"],
+["Tennis Court","TENNIS","🎾"],
+["Boxing Arena","BOXING","🥊"],
+["Archery Range","ARCHERY","🏹"],
+["Golf Valley","GOLF","⛳"],
+["Skate Park","SKATE","🛹"],
+["Mountain Bike","BIKE","🚵"],
+["Motorcycle Race","MOTORCYCLE","🏍️"],
+["Monster Truck","TRUCK","🚚"],
+
+["Jungle Adventure","JUNGLE","🌴"],
+["Forest Explorer","FOREST","🌲"],
+["Volcano Escape","VOLCANO","🌋"],
+["Island Treasure","ISLAND","🏝️"],
+["Castle Quest","CASTLE","🏰"],
+["Dungeon Maze","DUNGEON","🧱"],
+["Pirate Adventure","PIRATE","🏴‍☠️"],
+["Underwater Explorer","UNDERWATER","🐠"],
+["Arctic Survival","ARCTIC","🧊"],
+["Mountain Climber","MOUNTAIN","🏔️"],
+
+["Robot Arena","ROBOT","🤖"],
+["Alien Planet","ALIEN","👽"],
+["Survival City","SURVIVAL","🧟"],
+["Dragon Valley","DRAGON","🐉"],
+["Ninja Dojo","NINJA","🥷"],
+["Samurai Duel","SAMURAI","⚔️"],
+["Tower Defense","TOWER","🏯"],
+["Castle Defense","CASTLEDEF","🏰"],
+["Drone Pilot","DRONE","🚁"],
+["Helicopter Rescue","HELI","🚁"],
+
+["City Taxi","TAXI","🚕"],
+["Police Chase","POLICE","🚓"],
+["Ambulance Driver","AMBULANCE","🚑"],
+["Fire Rescue","FIRE","🚒"],
+["Airport Pilot","AIRPORT","✈️"],
+["Train Driver","TRAIN","🚆"],
+["Submarine Mission","SUBMARINE","🛳️"],
+["Farm Simulator","FARM","🚜"],
+["Fishing Lake","FISHING","🎣"],
+["Open World City","OPENWORLD","🌇"]
+
+];
+
+
+/* =====================================================
+                     GLOBAL VARIABLES
+===================================================== */
+
+let scene;
+let camera;
+let renderer;
+let clock;
+
+let player;
+
+let humans=[];
+let enemies=[];
+let cars=[];
+let buildings=[];
+let trees=[];
+let props=[];
+let projectiles=[];
+
+let currentCar=null;
+
+let keys={};
+
+let gameIndex=0;
+let gameType="";
+
+let score=0;
+let health=100;
+let level=1;
+
+let running=false;
+
+let playerSpeed=.16;
+
+let yaw=0;
+
+let lastTime=0;
+
+
+/* =====================================================
+                       MENU
+===================================================== */
+
+const gameList=
+document.getElementById("gameList");
+
+GAMES.forEach((g,i)=>{
+
+    const card=
+    document.createElement("div");
+
+    card.className="card";
+
+    card.innerHTML=`
+
+        <div class="number">
+            GAME ${i+1}
+        </div>
+
+        <h2>
+            ${g[2]} ${g[0]}
+        </h2>
+
+        <div class="category">
+            ${g[1]}
+        </div>
+    `;
+
+    card.onclick=()=>{
+        startGame(i);
+    };
+
+    gameList.appendChild(card);
+
+});
+
+
+/* =====================================================
+                       START GAME
+===================================================== */
+
+function startGame(index){
+
+    gameIndex=index;
+    gameType=GAMES[index][1];
+
+    document.getElementById(
+        "loading"
+    ).style.display="flex";
+
+    setTimeout(()=>{
+
+        document.getElementById(
+            "menu"
+        ).style.display="none";
+
+        document.getElementById(
+            "hud"
+        ).style.display="block";
+
+        document.getElementById(
+            "gameTitle"
+        ).textContent=
+            GAMES[index][2]+" "+
+            GAMES[index][0];
+
+        if(!renderer){
+            init();
+        }
+
+        buildGame();
+
+        running=true;
+
+        document.getElementById(
+            "loading"
+        ).style.display="none";
+
+    },100);
+
+}
+
+
+/* =====================================================
+                         INIT
+===================================================== */
+
+function init(){
+
+    scene=
+    new THREE.Scene();
+
+    camera=
+    new THREE.PerspectiveCamera(
+        70,
+        innerWidth/innerHeight,
+        .1,
+        2000
+    );
+
+    renderer=
+    new THREE.WebGLRenderer({
+        antialias:true
+    });
+
+    renderer.setPixelRatio(
+        Math.min(devicePixelRatio,2)
+    );
+
+    renderer.setSize(
+        innerWidth,
+        innerHeight
+    );
+
+    renderer.shadowMap.enabled=true;
+
+    document.body.appendChild(
+        renderer.domElement
+    );
+
+    clock=new THREE.Clock();
+
+
+    /* LIGHT */
+
+    const hemi=
+    new THREE.HemisphereLight(
+        0xffffff,
+        0x39434f,
+        2.2
+    );
+
+    scene.add(hemi);
+
+
+    const sun=
+    new THREE.DirectionalLight(
+        0xffffff,
+        2.5
+    );
+
+    sun.position.set(
+        300,
+        500,
+        200
+    );
+
+    sun.castShadow=true;
+
+    sun.shadow.mapSize.width=2048;
+    sun.shadow.mapSize.height=2048;
+
+    scene.add(sun);
+
+
+    setupInput();
+
+}
+
+
+/* =====================================================
+                      CLEAR WORLD
+===================================================== */
+
+function clearWorld(){
+
+    while(scene.children.length>2){
+
+        scene.remove(
+            scene.children[
+                scene.children.length-1
+            ]
+        );
+
+    }
+
+    humans=[];
+    enemies=[];
+    cars=[];
+    buildings=[];
+    trees=[];
+    props=[];
+    projectiles=[];
+
+    currentCar=null;
+
+}
+
+
+/* =====================================================
+                     BUILD GAME
+===================================================== */
+
+function buildGame(){
+
+    clearWorld();
+
+    score=0;
+    health=100;
+    level=1;
+
+    playerSpeed=.16;
+
+
+    switch(gameType){
+
+        case"RUNNER":
+            buildRunner();
+            break;
+
+        case"PLATFORM":
+            buildPlatform();
+            break;
+
+        case"RACING":
+            buildRacing();
+            break;
+
+        case"DESERT":
+            buildDesert();
+            break;
+
+        case"SNOW":
+            buildSnow();
+            break;
+
+        case"OCEAN":
+            buildOcean();
+            break;
+
+        case"SPACE":
+            buildSpace();
+            break;
+
+        case"GALAXY":
+            buildGalaxy();
+            break;
+
+        case"ASTEROID":
+            buildAsteroid();
+            break;
+
+        case"MOON":
+            buildMoon();
+            break;
+
+        case"FOOTBALL":
+            buildFootball();
+            break;
+
+        case"BASKETBALL":
+            buildBasketball();
+            break;
+
+        case"TENNIS":
+            buildTennis();
+            break;
+
+        case"BOXING":
+            buildBoxing();
+            break;
+
+        case"ARCHERY":
+            buildArchery();
+            break;
+
+        case"GOLF":
+            buildGolf();
+            break;
+
+        case"SKATE":
+            buildSkate();
+            break;
+
+        case"BIKE":
+            buildBike();
+            break;
+
+        case"MOTORCYCLE":
+            buildMotorcycle();
+            break;
+
+        case"TRUCK":
+            buildTruck();
+            break;
+
+        case"JUNGLE":
+            buildJungle();
+            break;
+
+        case"FOREST":
+            buildForest();
+            break;
+
+        case"VOLCANO":
+            buildVolcano();
+            break;
+
+        case"ISLAND":
+            buildIsland();
+            break;
+
+        case"CASTLE":
+            buildCastle();
+            break;
+
+        case"DUNGEON":
+            buildDungeon();
+            break;
+
+        case"PIRATE":
+            buildPirate();
+            break;
+
+        case"UNDERWATER":
+            buildUnderwater();
+            break;
+
+        case"ARCTIC":
+            buildArctic();
+            break;
+
+        case"MOUNTAIN":
+            buildMountain();
+            break;
+
+        case"ROBOT":
+            buildRobot();
+            break;
+
+        case"ALIEN":
+            buildAlien();
+            break;
+
+        case"SURVIVAL":
+            buildSurvival();
+            break;
+
+        case"DRAGON":
+            buildDragon();
+            break;
+
+        case"NINJA":
+            buildNinja();
+            break;
+
+        case"SAMURAI":
+            buildSamurai();
+            break;
+
+        case"TOWER":
+            buildTower();
+            break;
+
+        case"CASTLEDEF":
+            buildCastleDefense();
+            break;
+
+        case"DRONE":
+            buildDrone();
+            break;
+
+        case"HELI":
+            buildHelicopter();
+            break;
+
+        case"TAXI":
+            buildTaxi();
+            break;
+
+        case"POLICE":
+            buildPolice();
+            break;
+
+        case"AMBULANCE":
+            buildAmbulance();
+            break;
+
+        case"FIRE":
+            buildFire();
+            break;
+
+        case"AIRPORT":
+            buildAirport();
+            break;
+
+        case"TRAIN":
+            buildTrain();
+            break;
+
+        case"SUBMARINE":
+            buildSubmarine();
+            break;
+
+        case"FARM":
+            buildFarm();
+            break;
+
+        case"FISHING":
+            buildFishing();
+            break;
+
+        case"OPENWORLD":
+            buildOpenWorld();
+            break;
+
+    }
+
+
+    createPlayer();
+
+    updateMission();
+
+}
+
+
+/* =====================================================
+                  MATERIAL HELPERS
+===================================================== */
+
+function mat(color){
+
+    return new THREE.MeshStandardMaterial({
+        color:color
+    });
+
+}
+
+
+function cube(
+    x,y,z,
+    sx,sy,sz,
+    color
+){
+
+    const o=
+    new THREE.Mesh(
+
+        new THREE.BoxGeometry(
+            sx,sy,sz
+        ),
+
+        mat(color)
+
+    );
+
+    o.position.set(
+        x,y,z
+    );
+
+    o.castShadow=true;
+    o.receiveShadow=true;
+
+    scene.add(o);
+
+    props.push(o);
+
+    return o;
+
+}
+
+
+function sphere(
+    x,y,z,
+    r,
+    color
+){
+
+    const o=
+    new THREE.Mesh(
+
+        new THREE.SphereGeometry(
+            r,
+            16,
+            12
+        ),
+
+        mat(color)
+
+    );
+
+    o.position.set(
+        x,y,z
+    );
+
+    o.castShadow=true;
+
+    scene.add(o);
+
+    props.push(o);
+
+    return o;
+
+}
+
+
+function floor(
+    color,
+    size=1000
+){
+
+    const f=
+    new THREE.Mesh(
+
+        new THREE.PlaneGeometry(
+            size,
+            size
+        ),
+
+        mat(color)
+
+    );
+
+    f.rotation.x=-Math.PI/2;
+
+    f.receiveShadow=true;
+
+    scene.add(f);
+
+}
+
+
+/* =====================================================
+                        HUMAN
+===================================================== */
+
+function createHuman(
+    bodyColor=0x345477,
+    scale=1
+){
+
+    const g=
+    new THREE.Group();
+
+
+    /* torso */
+
+    const torso=
+    new THREE.Mesh(
+
+        new THREE.BoxGeometry(
+            1.8,
+            2.8,
+            1
+        ),
+
+        mat(bodyColor)
+
+    );
+
+    torso.position.y=4.5;
+
+    g.add(torso);
+
+
+    /* neck */
+
+    const neck=
+    new THREE.Mesh(
+
+        new THREE.CylinderGeometry(
+            .35,
+            .35,
+            .4,
+            12
+        ),
+
+        mat(0xb87958)
+
+    );
+
+    neck.position.y=6.05;
+
+    g.add(neck);
+
+
+    /* head */
+
+    const head=
+    new THREE.Mesh(
+
+        new THREE.SphereGeometry(
+            .85,
+            20,
+            16
+        ),
+
+        mat(0xb87958)
+
+    );
+
+    head.position.y=7.05;
+
+    g.add(head);
+
+
+    /* hair */
+
+    const hair=
+    new THREE.Mesh(
+
+        new THREE.SphereGeometry(
+            .87,
+            20,
+            12,
+            0,
+            Math.PI*2,
+            0,
+            Math.PI/2
+        ),
+
+        mat(0x19130f)
+
+    );
+
+    hair.position.y=7.3;
+
+    g.add(hair);
+
+
+    /* arms */
+
+    const armL=
+    new THREE.Mesh(
+        new THREE.CapsuleGeometry(
+            .22,
+            2.2,
+            6,
+            10
+        ),
+        mat(bodyColor)
+    );
+
+    armL.position.set(
+        -1.2,
+        4.5,
+        0
+    );
+
+    g.add(armL);
+
+
+    const armR=armL.clone();
+
+    armR.position.x=1.2;
+
+    g.add(armR);
+
+
+    /* legs */
+
+    const legL=
+    new THREE.Mesh(
+        new THREE.CapsuleGeometry(
+            .27,
+            2.3,
+            6,
+            10
+        ),
+        mat(0x20252d)
+    );
+
+    legL.position.set(
+        -.5,
+        1.9,
+        0
+    );
+
+    g.add(legL);
+
+
+    const legR=legL.clone();
+
+    legR.position.x=.5;
+
+    g.add(legR);
+
+
+    g.scale.setScalar(scale);
+
+    g.userData={
+        armL,
+        armR,
+        legL,
+        legR,
+        walkOffset:
+            Math.random()*10,
+        speed:
+            .02+Math.random()*.05
+    };
+
+
+    return g;
+
+}
+
+
+/* =====================================================
+                     PLAYER
+===================================================== */
+
+function createPlayer(){
+
+    player=
+    createHuman(
+        0x2369aa,
+        1.25
+    );
+
+    player.position.set(
+        0,
+        0,
+        0
+    );
+
+    scene.add(player);
+
+}
+
+
+/* =====================================================
+                   HUMAN ANIMATION
+===================================================== */
+
+function animateHuman(h){
+
+    if(!h.userData.legL)return;
+
+    const t=
+        performance.now()*.008+
+        h.userData.walkOffset;
+
+
+    h.userData.armL.rotation.x=
+        Math.sin(t)*.45;
+
+    h.userData.armR.rotation.x=
+        -Math.sin(t)*.45;
+
+    h.userData.legL.rotation.x=
+        -Math.sin(t)*.5;
+
+    h.userData.legR.rotation.x=
+        Math.sin(t)*.5;
+
+}
+
+
+/* =====================================================
+                  CREATE NPC GROUP
+===================================================== */
+
+function addHumans(
+    count,
+    area=250
+){
+
+    for(let i=0;i<count;i++){
+
+        const colors=[
+            0x2e5275,
+            0x5c3d2e,
+            0x6a6a6a,
+            0x3c7042,
+            0x743d54,
+            0x444444
+        ];
+
+        const h=
+        createHuman(
+            colors[
+                Math.floor(
+                    Math.random()*colors.length
+                )
+            ],
+            1+Math.random()*.25
+        );
+
+        h.position.set(
+            (Math.random()-.5)*area,
+            0,
+            (Math.random()-.5)*area
+        );
+
+        scene.add(h);
+
+        humans.push(h);
+
+    }
+
+}
+
+
+/* =====================================================
+                    ENEMY
+===================================================== */
+
+function addEnemies(
+    count,
+    area=250,
+    color=0x873737
+){
+
+    for(let i=0;i<count;i++){
+
+        const e=
+        createHuman(
+            color,
+            1.1
+        );
+
+        e.position.set(
+            (Math.random()-.5)*area,
+            0,
+            (Math.random()-.5)*area
+        );
+
+        e.userData.enemy=true;
+
+        scene.add(e);
+
+        enemies.push(e);
+
+    }
+
+}
+
+
+/* =====================================================
+                      TREE
+===================================================== */
+
+function addTree(
+    x,
+    z,
+    scale=1
+){
+
+    const g=
+    new THREE.Group();
+
+
+    const trunk=
+    new THREE.Mesh(
+
+        new THREE.CylinderGeometry(
+            .7,
+            1,
+            6,
+            10
+        ),
+
+        mat(0x68452b)
+
+    );
+
+    trunk.position.y=3;
+
+    g.add(trunk);
+
+
+    const leaves=
+    new THREE.Mesh(
+
+        new THREE.ConeGeometry(
+            4*scale,
+            9*scale,
+            9
+        ),
+
+        mat(0x1f702d)
+
+    );
+
+    leaves.position.y=8;
+
+    g.add(leaves);
+
+
+    g.position.set(
+        x,
+        0,
+        z
+    );
+
+    g.castShadow=true;
+
+    scene.add(g);
+
+    trees.push(g);
+
+}
+
+
+/* =====================================================
+                      BUILDING
+===================================================== */
+
+function addBuilding(
+    x,z,
+    w=20,
+    h=30,
+    d=20
+){
+
+    const b=
+    new THREE.Group();
+
+
+    const body=
+    new THREE.Mesh(
+
+        new THREE.BoxGeometry(
+            w,h,d
+        ),
+
+        mat(
+            0x444444+
+            Math.floor(
+                Math.random()*0x222222
+            )
+        )
+
+    );
+
+    body.position.y=h/2;
+
+    body.castShadow=true;
+
+    b.add(body);
+
+
+    /* windows */
+
+    for(
+        let yy=5;
+        yy<h;
+        yy+=7
+    ){
+
+        for(
+            let xx=-w/2+3;
+            xx<w/2;
+            xx+=6
+        ){
+
+            const win=
+            new THREE.Mesh(
+
+                new THREE.BoxGeometry(
+                    2.5,
+                    2.5,
+                    .2
+                ),
+
+                mat(0x82b8d8)
+
+            );
+
+            win.position.set(
+                xx,
+                yy,
+                d/2+.11
+            );
+
+            b.add(win);
+
+        }
+
+    }
+
+
+    /* door */
+
+    const door=
+    new THREE.Mesh(
+
+        new THREE.BoxGeometry(
+            3,
+            5,
+            .3
+        ),
+
+        mat(0x191919)
+
+    );
+
+    door.position.set(
+        0,
+        2.5,
+        d/2+.2
+    );
+
+    b.add(door);
+
+
+    b.position.set(
+        x,
+        0,
+        z
+    );
+
+    scene.add(b);
+
+    buildings.push(b);
+
+}
+
+
+/* =====================================================
+                       CAR
+===================================================== */
+
+function createCar(
+    color
+){
+
+    const car=
+    new THREE.Group();
+
+
+    const body=
+    new THREE.Mesh(
+
+        new THREE.BoxGeometry(
+            4.5,
+            1.4,
+            8
+        ),
+
+        mat(color)
+    );
+
+    body.position.y=1.5;
+
+    car.add(body);
+
+
+    const cabin=
+    new THREE.Mesh(
+
+        new THREE.BoxGeometry(
+            3.3,
+            1.5,
+            3.8
+        ),
+
+        mat(0x20252c)
+
+    );
+
+    cabin.position.y=2.7;
+
+    car.add(cabin);
+
+
+    for(
+        const x of [-2.3,2.3]
+    ){
+
+        for(
+            const z of [-2.5,2.5]
+        ){
+
+            const wheel=
+            new THREE.Mesh(
+
+                new THREE.CylinderGeometry(
+                    .75,
+                    .75,
+                    .5,
+                    16
+                ),
+
+                mat(0x090909)
+
+            );
+
+            wheel.rotation.z=
+                Math.PI/2;
+
+            wheel.position.set(
+                x,
+                .75,
+                z
+            );
+
+            car.add(wheel);
+
+        }
+
+    }
+
+
+    car.userData={
+        speed:
+            .08+
+            Math.random()*.18,
+        ai:true
+    };
+
+
+    return car;
+
+}
+
+
+/* =====================================================
+                     ADD CARS
+===================================================== */
+
+function addCars(
+    count,
+    area=400
+){
+
+    const colors=[
+        0xd22d2d,
+        0x2769c5,
+        0xf0f0f0,
+        0x171717,
+        0xe5aa27,
+        0x2d9d52,
+        0x873bc2
+    ];
+
+
+    for(let i=0;i<count;i++){
+
+        const car=
+        createCar(
+            colors[
+                Math.floor(
+                    Math.random()*colors.length
+                )
+            ]
+        );
+
+        car.position.set(
+            (Math.random()-.5)*area,
+            0,
+            (Math.random()-.5)*area
+        );
+
+        car.rotation.y=
+            Math.random()*Math.PI*2;
+
+        scene.add(car);
+
+        cars.push(car);
+
+    }
+
+}
+
+
+/* =====================================================
+                     ROAD
+===================================================== */
+
+function roads(){
+
+    for(
+        let i=-400;
+        i<=400;
+        i+=80
+    ){
+
+        cube(
+            i,
+            .05,
+            0,
+            25,
+            .1,
+            900,
+            0x292929
+        );
+
+        cube(
+            0,
+            .06,
+            i,
+            900,
+            .1,
+            25,
+            0x292929
+        );
+
+    }
+
+}
+
+
+/* =====================================================
+                    RUNNER
+===================================================== */
+
+function buildRunner(){
+
+    scene.background=
+        new THREE.Color(0x75b6df);
+
+    floor(0x333333);
+
+    playerSpeed=.32;
+
+    roads();
+
+    addHumans(30,250);
+
+    addCars(20,400);
+
+    for(let i=0;i<80;i++){
+
+        cube(
+            (Math.random()-.5)*30,
+            1.5,
+            -i*20,
+            5,
+            3,
+            4,
+            0xff7a20
+        );
+
+    }
+
+    document.getElementById(
+        "missionText"
+    ).textContent=
+    "RUN — avoid obstacles and reach the finish";
+
+
+}
+
+
+/* =====================================================
+                   PLATFORM
+===================================================== */
+
+function buildPlatform(){
+
+    scene.background=
+        new THREE.Color(0x91d4ff);
+
+    playerSpeed=.18;
+
+    for(let i=0;i<60;i++){
+
+        cube(
+            (Math.random()-.5)*35,
+            Math.random()*15,
+            -i*18,
+            12,
+            1,
+            12,
+            0xffffff
+        );
+
+    }
+
+    addHumans(15,80);
+
+    document.getElementById(
+        "missionText"
+    ).textContent=
+    "JUMP across the floating platforms";
+
+}
+
+
+/* =====================================================
+                     RACING
+===================================================== */
+
+function buildRacing(){
+
+    scene.background=
+        new THREE.Color(0x8eb3c7);
+
+    floor(0x303030,1500);
+
+    playerSpeed=.42;
+
+    roads();
+
+    addCars(35,700);
+
+    addHumans(20,400);
+
+    for(let i=0;i<100;i++){
+
+        addTree(
+            (Math.random()-.5)*800,
+            (Math.random()-.5)*800,
+            .7
+        );
+
+    }
+
+    document.getElementById(
+        "missionText"
+    ).textContent=
+    "RACE — reach the finish line";
+
+
+}
+
+
+/* =====================================================
+                    DESERT
+===================================================== */
+
+function buildDesert(){
+
+    scene.background=
+        new THREE.Color(0xf0b46b);
+
+    floor(0xc99552,1200);
+
+    playerSpeed=.25;
+
+    addCars(25,700);
+
+    for(let i=0;i<100;i++){
+
+        const rock=
+        new THREE.Mesh(
+
+            new THREE.DodecahedronGeometry(
+                2+Math.random()*5
+            ),
+
+            mat(0x745137)
+
+        );
+
+        rock.position.set(
+            (Math.random()-.5)*900,
+            2,
+            (Math.random()-.5)*900
+        );
+
+        scene.add(rock);
+
+    }
+
+    document.getElementById(
+        "missionText"
+    ).textContent=
+    "DESERT RALLY — drive through checkpoints";
+
+}
+
+
+/* =====================================================
+                      SNOW
+===================================================== */
+
+function buildSnow(){
+
+    scene.background=
+        new THREE.Color(0xb8d9ed);
+
+    floor(0xe9f3f7,1000);
+
+    playerSpeed=.28;
+
+    addCars(30,700);
+
+    for(let i=0;i<100;i++){
+
+        addTree(
+            (Math.random()-.5)*800,
+            (Math.random()-.5)*800,
+            .8
+        );
+
+    }
+
+    document.getElementById(
+        "missionText"
+    ).textContent=
+    "SNOW RACE — reach the mountain finish";
+
+}
+
+
+/* =====================================================
+                      OCEAN
+===================================================== */
+
+function buildOcean(){
+
+    scene.background=
+        new THREE.Color(0x65bde8);
+
+    floor(0x087fa8,1200);
+
+    playerSpeed=.25;
+
+    for(let i=0;i<30;i++){
+
+        const boat=
+        createCar(0xf0f0f0);
+
+        boat.scale.set(
+            1,
+            .5,
+            1.4
+        );
+
+        boat.position.set(
+            (Math.random()-.5)*600,
+            .5,
+            (Math.random()-.5)*600
+        );
+
+        scene.add(boat);
+
+    }
+
+    for(let i=0;i<20;i++){
+
+        sphere(
+            (Math.random()-.5)*600,
+            0,
+            (Math.random()-.5)*600,
+            10+Math.random()*15,
+            0xd8b86a
+        );
+
+    }
+
+    document.getElementById(
+        "missionText"
+    ).textContent=
+    "OCEAN — navigate around the islands";
+
+}
+
+
+/* =====================================================
+                       SPACE
+===================================================== */
+
+function buildSpace(){
+
+    scene.background=
+        new THREE.Color(0x02020d);
+
+    playerSpeed=.35;
+
+    for(let i=0;i<400;i++){
+
+        sphere(
+            (Math.random()-.5)*1000,
+            (Math.random()-.5)*600,
+            -Math.random()*1200,
+            .4,
+            0xffffff
+        );
+
+    }
+
+    for(let i=0;i<15;i++){
+
+        sphere(
+            (Math.random()-.5)*300,
+            (Math.random()-.5)*150,
+            -100-i*50,
+            5+Math.random()*8,
+            0x493c91
+        );
+
+    }
+
+    document.getElementById(
+        "missionText"
+    ).textContent=
+    "SPACE PILOT — fly through the stars";
+
+}
+
+
+/* =====================================================
+                      GALAXY
+===================================================== */
+
+function buildGalaxy(){
+
+    buildSpace();
+
+    addEnemies(
+        25,
+        250,
+        0x8b38a8
+    );
+
+    document.getElementById(
+        "missionText"
+    ).textContent=
+    "DEFEND the galaxy";
+
+}
+
+
+/* =====================================================
+                     ASTEROID
+===================================================== */
+
+function buildAsteroid(){
+
+    scene.background=
+        new THREE.Color(0x010108);
+
+    playerSpeed=.3;
+
+    for(let i=0;i<100;i++){
+
+        const a=
+        new THREE.Mesh(
+
+            new THREE.IcosahedronGeometry(
+                2+Math.random()*5
+            ),
+
+            mat(0x777777)
+
+        );
+
+        a.position.set(
+            (Math.random()-.5)*100,
+            (Math.random()-.5)*70,
+            -Math.random()*800
+        );
+
+        scene.add(a);
+
+        props.push(a);
+
+    }
+
+    document.getElementById(
+        "missionText"
+    ).textContent=
+    "DODGE the asteroids";
+
+}
+
+
+/* =====================================================
+                       MOON
+===================================================== */
+
+function buildMoon(){
+
+    scene.background=
+        new THREE.Color(0x03030c);
+
+    floor(0x777777,800);
+
+    playerSpeed=.14;
+
+    for(let i=0;i<100;i++){
+
+        const crater=
+        new THREE.Mesh(
+
+            new THREE.CylinderGeometry(
+                2+Math.random()*5,
+                3+Math.random()*5,
+                .5,
+                12
+            ),
+
+            mat(0x555555)
+
+        );
+
+        crater.position.set(
+            (Math.random()-.5)*700,
+            .2,
+            (Math.random()-.5)*700
+        );
+
+        scene.add(crater);
+
+    }
+
+    document.getElementById(
+        "missionText"
+    ).textContent=
+    "EXPLORE the moon";
+
+}
+
+
+/* =====================================================
+                    FOOTBALL
+===================================================== */
+
+function buildFootball(){
+
+    scene.background=
+        new THREE.Color(0x79b5dc);
+
+    floor(0x168c45,180);
+
+    playerSpeed=.2;
+
+    addHumans(22,80);
+
+    /* goals */
+
+    cube(
+        -45,5,-40,
+        2,10,20,
+        0xffffff
+    );
+
+    cube(
+        45,5,-40,
+        2,10,20,
+        0xffffff
+    );
+
+    sphere(
+        0,1,-10,
+        1.2,
+        0xffffff
+    );
+
+    document.getElementById(
+        "missionText"
+    ).textContent=
+    "FOOTBALL — score a goal";
+
+}
+
+
+/* =====================================================
+                    BASKETBALL
+===================================================== */
+
+function buildBasketball(){
+
+    scene.background=
+        new THREE.Color(0x444c59);
+
+    floor(0xc18445,100);
+
+    addHumans(10,60);
+
+    cube(
+        0,5,-35,
+        12,10,1,
+        0xffffff
+    );
+
+    sphere(
+        0,1,-20,
+        1.2,
+        0xe87523
+    );
+
+    document.getElementById(
+        "missionText"
+    ).textContent=
+    "BASKETBALL — reach the basket";
+
+}
+
+
+/* =====================================================
+                    TENNIS
+===================================================== */
+
+function buildTennis(){
+
+    scene.background=
+        new THREE.Color(0x77a8c4);
+
+    floor(0x1d8d5c,120);
+
+    cube(
+        0,1,-10,
+        2,.2,80,
+        0xffffff
+    );
+
+    addHumans(4,60);
+
+    sphere(
+        0,1,-20,
+        .7,
+        0xffff55
+    );
+
+    document.getElementById(
+        "missionText"
+    ).textContent=
+    "TENNIS — reach the ball";
+
+}
+
+
+/* =====================================================
+                     BOXING
+===================================================== */
+
+function buildBoxing(){
+
+    scene.background=
+        new THREE.Color(0x241414);
+
+    floor(0x772727,100);
+
+    addHumans(8,60);
+
+    addEnemies(3,40,0x9c3838);
+
+    document.getElementById(
+        "missionText"
+    ).textContent=
+    "BOXING — complete the arena challenge";
+
+}
+
+
+/* =====================================================
+                     ARCHERY
+===================================================== */
+
+function buildArchery(){
+
+    scene.background=
+        new THREE.Color(0x75ae72);
+
+    floor(0x42783b,200);
+
+    for(let i=0;i<12;i++){
+
+        const target=
+        new THREE.Mesh(
+
+            new THREE.CylinderGeometry(
+                4,
+                4,
+                .7,
+                24
+            ),
+
+            mat(0xcc3333)
+
+        );
+
+        target.rotation.x=
+            Math.PI/2;
+
+        target.position.set(
+            (Math.random()-.5)*80,
+            5,
+            -i*18
+        );
+
+        scene.add(target);
+
+    }
+
+    document.getElementById(
+        "missionText"
+    ).textContent=
+    "ARCHERY — hit the targets";
+
+}
+
+
+/* =====================================================
+                       GOLF
+===================================================== */
+
+function buildGolf(){
+
+    scene.background=
+        new THREE.Color(0x8cc5df);
+
+    floor(0x3b8c45,500);
+
+    for(let i=0;i<30;i++){
+
+        addTree(
+            (Math.random()-.5)*300,
+            (Math.random()-.5)*300,
+            .8
+        );
+
+    }
+
+    sphere(
+        0,.5,-40,
+        .5,
+        0xffffff
+    );
+
+    document.getElementById(
+        "missionText"
+    ).textContent=
+    "GOLF — reach the hole";
+
+}
+
+
+/* =====================================================
+                       SKATE
+===================================================== */
+
+function buildSkate(){
+
+    scene.background=
+        new THREE.Color(0x9db2c2);
+
+    floor(0x555555,200);
+
+    for(let i=0;i<20;i++){
+
+        cube(
+            (Math.random()-.5)*80,
+            1,
+            (Math.random()-.5)*80,
+            12,
+            2,
+            3,
+            0x888888
+        );
+
+    }
+
+    addHumans(12,100);
+
+    document.getElementById(
+        "missionText"
+    ).textContent=
+    "SKATE — complete the park course";
+
+}
+
+
+/* =====================================================
+                     BIKE
+===================================================== */
+
+function buildBike(){
+
+    buildForest();
+
+    playerSpeed=.35;
+
+    addCars(10,300);
+
+    document.getElementById(
+        "missionText"
+    ).textContent=
+    "BIKE — follow the mountain trail";
+
+}
+
+
+/* =====================================================
+                  MOTORCYCLE
+===================================================== */
+
+function buildMotorcycle(){
+
+    buildRacing();
+
+    playerSpeed=.5;
+
+    document.getElementById(
+        "missionText"
+    ).textContent=
+    "MOTORCYCLE RACE — beat the traffic";
+
+}
+
+
+/* =====================================================
+                     TRUCK
+===================================================== */
+
+function buildTruck(){
+
+    buildDesert();
+
+    playerSpeed=.3;
+
+    document.getElementById(
+        "missionText"
+    ).textContent=
+    "MONSTER TRUCK — cross the obstacles";
+
+}
+
+
+/* =====================================================
+                     JUNGLE
+===================================================== */
+
+function buildJungle(){
+
+    scene.background=
+        new THREE.Color(0x76a9ba);
+
+    floor(0x1c662b,900);
+
+    addHumans(25,400);
+
+    addEnemies(8,300,0x6a3e25);
+
+    for(let i=0;i<250;i++){
+
+        addTree(
+            (Math.random()-.5)*800,
+            (Math.random()-.5)*800,
+            1+Math.random()
+        );
+
+    }
+
+    document.getElementById(
+        "missionText"
+    ).textContent=
+    "JUNGLE — find the hidden objective";
+
+}
+
+
+/* =====================================================
+                     FOREST
+===================================================== */
+
+function buildForest(){
+
+    scene.background=
+        new THREE.Color(0x78a7ba);
+
+    floor(0x245d2b,900);
+
+    addHumans(40,500);
+
+    for(let i=0;i<300;i++){
+
+        addTree(
+            (Math.random()-.5)*850,
+            (Math.random()-.5)*850,
+            .7+Math.random()
+        );
+
+    }
+
+    document.getElementById(
+        "missionText"
+    ).textContent=
+    "FOREST — explore the wilderness";
+
+}
+
+
+/* =====================================================
+                     VOLCANO
+===================================================== */
+
+function buildVolcano(){
+
+    scene.background=
+        new THREE.Color(0x500d05);
+
+    floor(0x351512,900);
+
+    addEnemies(15,400,0x542626);
+
+    for(let i=0;i<100;i++){
+
+        sphere(
+            (Math.random()-.5)*700,
+            1,
+            (Math.random()-.5)*700,
+            2+Math.random()*5,
+            0x6e3022
+        );
+
+    }
+
+    document.getElementById(
+        "missionText"
+    ).textContent=
+    "VOLCANO — reach the safe zone";
+
+}
+
+
+/* =====================================================
+                      ISLAND
+===================================================== */
+
+function buildIsland(){
+
+    scene.background=
+        new THREE.Color(0x70c5e8);
+
+    floor(0xd4bd73,700);
+
+    addHumans(15,300);
+
+    for(let i=0;i<120;i++){
+
+        addTree(
+            (Math.random()-.5)*600,
+            (Math.random()-.5)*600,
+            .7
+        );
+
+    }
+
+    document.getElementById(
+        "missionText"
+    ).textContent=
+    "TREASURE — search the island";
+
+}
+
+
+/* =====================================================
+                      CASTLE
+===================================================== */
+
+function buildCastle(){
+
+    scene.background=
+        new THREE.Color(0x607a91);
+
+    floor(0x777777,500);
+
+    /* castle walls */
+
+    for(let i=-3;i<=3;i++){
+
+        cube(
+            i*15,
+            10,
+            -70,
+            10,
+            20,
+            8,
+            0x777777
+        );
+
+    }
+
+    addHumans(20,150);
+
+    document.getElementById(
+        "missionText"
+    ).textContent=
+    "CASTLE QUEST — explore the castle";
+
+}
+
+
+/* =====================================================
+                     DUNGEON
+===================================================== */
+
+function buildDungeon(){
+
+    scene.background=
+        new THREE.Color(0x090909);
+
+    floor(0x303030,300);
+
+    for(let i=0;i<80;i++){
+
+        cube(
+            (Math.random()-.5)*200,
+            3,
+            (Math.random()-.5)*200,
+            8,
+            6,
+            2,
+            0x666666
+        );
+
+    }
+
+    addEnemies(12,180,0x783535);
+
+    document.getElementById(
+        "missionText"
+    ).textContent=
+    "DUNGEON — find the exit";
+
+}
+
+
+/* =====================================================
+                     PIRATE
+===================================================== */
+
+function buildPirate(){
+
+    buildOcean();
+
+    addHumans(15,300);
+
+    document.getElementById(
+        "missionText"
+    ).textContent=
+    "PIRATE ADVENTURE — find the treasure";
+
+}
+
+
+/* =====================================================
+                   UNDERWATER
+===================================================== */
+
+function buildUnderwater(){
+
+    scene.background=
+        new THREE.Color(0x005e82);
+
+    floor(0x155e64,700);
+
+    for(let i=0;i<150;i++){
+
+        sphere(
+            (Math.random()-.5)*500,
+            Math.random()*80,
+            (Math.random()-.5)*500,
+            .5+Math.random()*2,
+            0xffcc44
+        );
+
+    }
+
+    addHumans(10,250);
+
+    document.getElementById(
+        "missionText"
+    ).textContent=
+    "UNDERWATER — explore the sea";
+
+}
+
+
+/* =====================================================
+                      ARCTIC
+===================================================== */
+
+function buildArctic(){
+
+    scene.background=
+        new THREE.Color(0xa8d0e8);
+
+    floor(0xe9f5f9,900);
+
+    addHumans(20,500);
+
+    for(let i=0;i<150;i++){
+
+        sphere(
+            (Math.random()-.5)*800,
+            3,
+            (Math.random()-.5)*800,
+            2+Math.random()*5,
+            0xcde4ef
+        );
+
+    }
+
+    document.getElementById(
+        "missionText"
+    ).textContent=
+    "ARCTIC — survive the frozen world";
+
+}
+
+
+/* =====================================================
+                     MOUNTAIN
+===================================================== */
+
+function buildMountain(){
+
+    scene.background=
+        new THREE.Color(0x9fc9e4);
+
+    floor(0x777777,1000);
+
+    for(let i=0;i<100;i++){
+
+        const mountain=
+        new THREE.Mesh(
+
+            new THREE.ConeGeometry(
+                8+Math.random()*15,
+                20+Math.random()*40,
+                7
+            ),
+
+            mat(0x6d7075)
+
+        );
+
+        mountain.position.set(
+            (Math.random()-.5)*800,
+            15,
+            (Math.random()-.5)*800
+        );
+
+        scene.add(mountain);
+
+    }
+
+    document.getElementById(
+        "missionText"
+    ).textContent=
+    "MOUNTAIN — climb to the summit";
+
+}
+
+
+/* =====================================================
+                      ROBOT
+===================================================== */
+
+function buildRobot(){
+
+    scene.background=
+        new THREE.Color(0x111b26);
+
+    floor(0x2c3540,500);
+
+    addEnemies(
+        25,
+        250,
+        0x5e6d7c
+    );
+
+    addHumans(10,150);
+
+    document.getElementById(
+        "missionText"
+    ).textContent=
+    "ROBOT ARENA — survive the challenge";
+
+}
+
+
+/* =====================================================
+                      ALIEN
+===================================================== */
+
+function buildAlien(){
+
+    scene.background=
+        new THREE.Color(0x12002a);
+
+    floor(0x34243e,700);
+
+    addEnemies(
+        30,
+        400,
+        0x703bb0
+    );
+
+    for(let i=0;i<50;i++){
+
+        sphere(
+            (Math.random()-.5)*500,
+            Math.random()*20,
+            (Math.random()-.5)*500,
+            2+Math.random()*4,
+            0x31aa62
+        );
+
+    }
+
+    document.getElementById(
+        "missionText"
+    ).textContent=
+    "ALIEN PLANET — explore the alien world";
+
+}
+
+
+/* =====================================================
+                    SURVIVAL
+===================================================== */
+
+function buildSurvival(){
+
+    scene.background=
+        new THREE.Color(0x20252a);
+
+    floor(0x353535,900);
+
+    roads();
+
+    addHumans(30,600);
+
+    addEnemies(
+        35,
+        500,
+        0x527338
+    );
+
+    for(let i=0;i<70;i++){
+
+        addBuilding(
+            (Math.random()-.5)*700,
+            (Math.random()-.5)*700,
+            15,
+            15+Math.random()*30,
+            15
+        );
+
+    }
+
+    document.getElementById(
+        "missionText"
+    ).textContent=
+    "SURVIVAL CITY — survive the zone";
+
+}
+
+
+/* =====================================================
+                     DRAGON
+===================================================== */
+
+function buildDragon(){
+
+    buildJungle();
+
+    addEnemies(
+        8,
+        400,
+        0x8d3025
+    );
+
+    document.getElementById(
+        "missionText"
+    ).textContent=
+    "DRAGON VALLEY — explore the valley";
+
+}
+
+
+/* =====================================================
+                      NINJA
+===================================================== */
+
+function buildNinja(){
+
+    scene.background=
+        new THREE.Color(0x101010);
+
+    floor(0x6d4c35,150);
+
+    addHumans(10,100);
+
+    addEnemies(
+        8,
+        80,
+        0x222222
+    );
+
+    document.getElementById(
+        "missionText"
+    ).textContent=
+    "NINJA DOJO — complete the training";
+
+}
+
+
+/* =====================================================
+                     SAMURAI
+===================================================== */
+
+function buildSamurai(){
+
+    scene.background=
+        new THREE.Color(0x36201c);
+
+    floor(0x7b5737,180);
+
+    addHumans(12,100);
+
+    addEnemies(
+        5,
+        70,
+        0x753a3a
+    );
+
+    document.getElementById(
+        "missionText"
+    ).textContent=
+    "SAMURAI DUEL — complete the arena";
+
+}
+
+
+/* =====================================================
+                      TOWER
+===================================================== */
+
+function buildTower(){
+
+    scene.background=
+        new THREE.Color(0x52647b);
+
+    floor(0x575757,500);
+
+    addEnemies(
+        20,
+        300,
+        0x6e3f2e
+    );
+
+    for(let i=0;i<10;i++){
+
+        addBuilding(
+            (Math.random()-.5)*300,
+            (Math.random()-.5)*300,
+            20,
+            30+Math.random()*60,
+            20
+        );
+
+    }
+
+    document.getElementById(
+        "missionText"
+    ).textContent=
+    "TOWER DEFENSE — protect the tower";
+
+}
+
+
+/* =====================================================
+                 CASTLE DEFENSE
+===================================================== */
+
+function buildCastleDefense(){
+
+    buildCastle();
+
+    addEnemies(
+        25,
+        300,
+        0x743333
+    );
+
+    document.getElementById(
+        "missionText"
+    ).textContent=
+    "CASTLE DEFENSE — protect the castle";
+
+}
+
+
+/* =====================================================
+                      DRONE
+===================================================== */
+
+function buildDrone(){
+
+    scene.background=
+        new THREE.Color(0x73b5e1);
+
+    playerSpeed=.35;
+
+    for(let i=0;i<50;i++){
+
+        sphere(
+            (Math.random()-.5)*500,
+            20+Math.random()*80,
+            (Math.random()-.5)*500,
+            1+Math.random()*2,
+            0xffffff
+        );
+
+    }
+
+    document.getElementById(
+        "missionText"
+    ).textContent=
+    "DRONE PILOT — fly through checkpoints";
+
+}
+
+
+/* =====================================================
+                    HELICOPTER
+===================================================== */
+
+function buildHelicopter(){
+
+    buildDrone();
+
+    addHumans(15,400);
+
+    document.getElementById(
+        "missionText"
+    ).textContent=
+    "HELICOPTER RESCUE — find the rescue zone";
+
+}
+
+
+/* =====================================================
+                       TAXI
+===================================================== */
+
+function buildTaxi(){
+
+    scene.background=
+        new THREE.Color(0x7798ae);
+
+    floor(0x333333,1000);
+
+    roads();
+
+    addCars(60,800);
+
+    addHumans(80,700);
+
+    for(let i=0;i<100;i++){
+
+        addBuilding(
+            (Math.random()-.5)*800,
+            (Math.random()-.5)*800,
+            15,
+            20+Math.random()*70,
+            15
+        );
+
+    }
+
+    document.getElementById(
+        "missionText"
+    ).textContent=
+    "TAXI — drive passengers around the city";
+
+}
+
+
+/* =====================================================
+                     POLICE
+===================================================== */
+
+function buildPolice(){
+
+    buildTaxi();
+
+    addEnemies(
+        15,
+        600,
+        0x1f355c
+    );
+
+    document.getElementById(
+        "missionText"
+    ).textContent=
+    "POLICE CHASE — escape the pursuit";
+
+}
+
+
+/* =====================================================
+                    AMBULANCE
+===================================================== */
+
+function buildAmbulance(){
+
+    buildTaxi();
+
+    document.getElementById(
+        "missionText"
+    ).textContent=
+    "AMBULANCE — reach the hospital";
+
+}
+
+
+/* =====================================================
+                       FIRE
+===================================================== */
+
+function buildFire(){
+
+    buildTaxi();
+
+    for(let i=0;i<20;i++){
+
+        sphere(
+            (Math.random()-.5)*500,
+            2,
+            (Math.random()-.5)*500,
+            2,
+            0xff5522
+        );
+
+    }
+
+    document.getElementById(
+        "missionText"
+    ).textContent=
+    "FIRE RESCUE — reach the emergency zone";
+
+}
+
+
+/* =====================================================
+                     AIRPORT
+===================================================== */
+
+function buildAirport(){
+
+    scene.background=
+        new THREE.Color(0x83b5d1);
+
+    floor(0x555555,1200);
+
+    for(let i=0;i<10;i++){
+
+        cube(
+            0,
+            5,
+            -i*80,
+            30,
+            10,
+            60,
+            0x888888
+        );
+
+    }
+
+    addCars(30,700);
+
+    addHumans(70,700);
+
+    document.getElementById(
+        "missionText"
+    ).textContent=
+    "AIRPORT — reach the runway";
+
+}
+
+
+/* =====================================================
+                      TRAIN
+===================================================== */
+
+function buildTrain(){
+
+    scene.background=
+        new THREE.Color(0x8aa5b4);
+
+    floor(0x555555,1200);
+
+    roads();
+
+    addHumans(50,700);
+
+    for(let i=0;i<15;i++){
+
+        const train=
+        createCar(0x4444aa);
+
+        train.scale.set(
+            1.4,
+            1.3,
+            2
+        );
+
+        train.position.set(
+            0,
+            0,
+            -i*50
+        );
+
+        scene.add(train);
+
+    }
+
+    document.getElementById(
+        "missionText"
+    ).textContent=
+    "TRAIN DRIVER — reach the station";
+
+}
+
+
+/* =====================================================
+                   SUBMARINE
+===================================================== */
+
+function buildSubmarine(){
+
+    buildUnderwater();
+
+    document.getElementById(
+        "missionText"
+    ).textContent=
+    "SUBMARINE — explore the deep ocean";
+
+}
+
+
+/* =====================================================
+                       FARM
+===================================================== */
+
+function buildFarm(){
+
+    scene.background=
+        new THREE.Color(0x80bad1);
+
+    floor(0x77572e,900);
+
+    addHumans(30,600);
+
+    for(let i=0;i<100;i++){
+
+        cube(
+            (Math.random()-.5)*700,
+            .5,
+            (Math.random()-.5)*700,
+            1,
+            1,
+            4,
+            0x3c8b3b
+        );
+
+    }
+
+    for(let i=0;i<20;i++){
+
+        addTree(
+            (Math.random()-.5)*700,
+            (Math.random()-.5)*700,
+            1
+        );
+
+    }
+
+    document.getElementById(
+        "missionText"
+    ).textContent=
+    "FARM — collect crops";
+
+}
+
+
+/* =====================================================
+                     FISHING
+===================================================== */
+
+function buildFishing(){
+
+    scene.background=
+        new THREE.Color(0x6bbbd8);
+
+    floor(0x247c9c,800);
+
+    for(let i=0;i<100;i++){
+
+        sphere(
+            (Math.random()-.5)*700,
+            Math.random()*20,
+            (Math.random()-.5)*700,
+            .7+Math.random()*2,
+            0xf2c94c
+        );
+
+    }
+
+    document.getElementById(
+        "missionText"
+    ).textContent=
+    "FISHING — find the fish zone";
+
+}
+
+
+/* =====================================================
+                   OPEN WORLD
+===================================================== */
+
+function buildOpenWorld(){
+
+    scene.background=
+        new THREE.Color(0x79a9c2);
+
+    floor(0x47783d,1200);
+
+    roads();
+
+    addHumans(120,900);
+
+    addCars(100,900);
+
+    for(let i=0;i<150;i++){
+
+        addBuilding(
+            (Math.random()-.5)*1000,
+            (Math.random()-.5)*1000,
+            15+Math.random()*20,
+            15+Math.random()*80,
+            15+Math.random()*20
+        );
+
+    }
+
+    for(let i=0;i<250;i++){
+
+        addTree(
+            (Math.random()-.5)*1100,
+            (Math.random()-.5)*1100,
+            .7+Math.random()
+        );
+
+    }
+
+    addEnemies(
+        20,
+        600,
+        0x713737
+    );
+
+    document.getElementById(
+        "missionText"
+    ).textContent=
+    "OPEN WORLD — explore the city";
+
+}
+
+
+/* =====================================================
+                    INPUT
+===================================================== */
+
+function setupInput(){
+
+    window.addEventListener(
+        "keydown",
+        e=>{
+
+            keys[
+                e.key.toLowerCase()
+            ]=true;
+
+            if(
+                e.key.toLowerCase()==="m"
+            ){
+                updateMission();
+            }
+
+            if(
+                e.key.toLowerCase()==="e"
+            ){
+                vehicleInteraction();
+            }
+
+        }
+    );
+
+
+    window.addEventListener(
+        "keyup",
+        e=>{
+
+            keys[
+                e.key.toLowerCase()
+            ]=false;
+
+        }
+    );
+
+
+    window.addEventListener(
+        "mousemove",
+        e=>{
+
+            if(
+                document.pointerLockElement===
+                renderer.domElement
+            ){
+
+                yaw-=e.movementX*.002;
+
+            }
+
+        }
+    );
+
+
+    renderer.domElement.addEventListener(
+        "click",
+        ()=>{
+
+            renderer.domElement.requestPointerLock();
+
+        }
+    );
+
+}
+
+
+/* =====================================================
+                 PLAYER MOVEMENT
+===================================================== */
+
+function updatePlayer(){
+
+    if(!player)return;
+
+
+    let s=
+        keys["shift"]
+        ? playerSpeed*2
+        : playerSpeed;
+
+
+    if(
+        gameType==="RUNNER" ||
+        gameType==="RACING" ||
+        gameType==="MOTORCYCLE"
+    ){
+
+        s*=1.2;
+
+    }
+
+
+    if(keys["w"] ||
+       keys["arrowup"]){
+
+        player.position.z-=s;
+
+    }
+
+
+    if(keys["s"] ||
+       keys["arrowdown"]){
+
+        player.position.z+=s;
+
+    }
+
+
+    if(keys["a"] ||
+       keys["arrowleft"]){
+
+        player.position.x-=s;
+
+        player.rotation.y=
+            Math.PI;
+
+    }
+
+
+    if(keys["d"] ||
+       keys["arrowright"]){
+
+        player.position.x+=s;
+
+        player.rotation.y=
+            0;
+
+    }
+
+
+    if(keys[" "]){
+        player.position.y=
+            Math.min(
+                player.position.y+.15,
+                4
+            );
+    }else{
+        player.position.y=
+            Math.max(
+                0,
+                player.position.y-.12
+            );
+    }
+
+
+    animateHuman(player);
+
+}
+
+
+/* =====================================================
+                 HUMAN AI
+===================================================== */
+
+function updateHumans(){
+
+    humans.forEach(h=>{
+
+        let s=
+            h.userData.speed;
+
+
+        if(
+            gameType==="RUNNER" ||
+            gameType==="RACING"
+        ){
+
+            s*=2;
+
+        }
+
+
+        h.position.z-=s;
+
+
+        if(
+            Math.abs(h.position.z)>450
+        ){
+
+            h.position.z=
+                -h.position.z;
+
+        }
+
+
+        animateHuman(h);
+
+    });
+
+}
+
+
+/* =====================================================
+                   ENEMY AI
+===================================================== */
+
+function updateEnemies(){
+
+    enemies.forEach(e=>{
+
+        const d=
+            e.position.distanceTo(
+                player.position
+            );
+
+
+        if(d<100){
+
+            const dir=
+                new THREE.Vector3()
+                .subVectors(
+                    player.position,
+                    e.position
+                )
+                .normalize();
+
+
+            e.position.add(
+                dir.multiplyScalar(.025)
+            );
+
+
+            e.lookAt(
+                player.position
+            );
+
+            animateHuman(e);
+
+        }
+
+    });
+
+}
+
+
+/* =====================================================
+                   CAR AI
+===================================================== */
+
+function updateCars(){
+
+    cars.forEach(car=>{
+
+        if(car===currentCar)
+            return;
+
+
+        car.position.z-=
+            car.userData.speed;
+
+
+        if(
+            Math.abs(car.position.z)>500
+        ){
+
+            car.position.z=
+                -car.position.z;
+
+        }
+
+    });
+
+}
+
+
+/* =====================================================
+               ENTER / EXIT CAR
+===================================================== */
+
+function vehicleInteraction(){
+
+    if(!player)return;
+
+
+    if(currentCar){
+
+        player.visible=true;
+
+        player.position.copy(
+            currentCar.position
+        );
+
+        currentCar=null;
+
+        document.getElementById(
+            "vehicleState"
+        ).textContent=
+            "ON FOOT";
+
+        return;
+
+    }
+
+
+    let closest=null;
+    let dist=10;
+
+
+    cars.forEach(car=>{
+
+        const d=
+            player.position.distanceTo(
+                car.position
+            );
+
+
+        if(d<dist){
+
+            closest=car;
+            dist=d;
+
+        }
+
+    });
+
+
+    if(closest){
+
+        currentCar=closest;
+
+        currentCar.userData.ai=false;
+
+        player.visible=false;
+
+        document.getElementById(
+            "vehicleState"
+        ).textContent=
+            "DRIVING";
+
+    }
+
+}
+
+
+/* =====================================================
+                    DRIVE
+===================================================== */
+
+function drive(){
+
+    if(!currentCar)return;
+
+
+    let s=
+        keys["shift"]
+        ? .7
+        : .4;
+
+
+    if(keys["w"])
+        currentCar.position.z-=s;
+
+    if(keys["s"])
+        currentCar.position.z+=s;
+
+    if(keys["a"])
+        currentCar.rotation.y+=.04;
+
+    if(keys["d"])
+        currentCar.rotation.y-=.04;
+
+
+    player.position.copy(
+        currentCar.position
+    );
+
+}
+
+
+/* =====================================================
+                    CAMERA
+===================================================== */
+
+function updateCamera(){
+
+    if(!player)return;
+
+
+    const target=
+        currentCar ||
+        player;
+
+
+    const offset=
+        new THREE.Vector3(
+            0,
+            8,
+            18
+        );
+
+
+    offset.applyAxisAngle(
+        new THREE.Vector3(0,1,0),
+        yaw
+    );
+
+
+    const desired=
+        target.position
+        .clone()
+        .add(offset);
+
+
+    camera.position.lerp(
+        desired,
+        .08
+    );
+
+
+    camera.lookAt(
+        target.position.x,
+        target.position.y+3,
+        target.position.z
+    );
+
+}
+
+
+/* =====================================================
+                     MISSION
+===================================================== */
+
+let mission=1;
+
+function updateMission(){
+
+    mission++;
+
+    const objectives=[
+
+        "Reach the marked area",
+        "Find the special object",
+        "Explore the map",
+        "Reach the checkpoint",
+        "Complete the challenge",
+        "Find the hidden location",
+        "Travel to the destination",
+        "Collect the objective",
+        "Reach the finish",
+        "Explore the world"
+
+    ];
+
+
+    document.getElementById(
+        "missionText"
+    ).textContent=
+        "MISSION "+
+        mission+
+        " — "+
+        objectives[
+            Math.floor(
+                Math.random()*
+                objectives.length
+            )
+        ];
+
+}
+
+
+/* =====================================================
+                      MINIMAP
+===================================================== */
+
+const map=
+document.getElementById(
+    "minimap"
+);
+
+const ctx=
+map.getContext("2d");
+
+
+function updateMinimap(){
+
+    map.width=170;
+    map.height=170;
+
+
+    ctx.fillStyle="#18231c";
+
+    ctx.fillRect(
+        0,
+        0,
+        170,
+        170
+    );
+
+
+    ctx.strokeStyle="#555";
+
+
+    for(
+        let i=0;
+        i<170;
+        i+=20
+    ){
+
+        ctx.beginPath();
+
+        ctx.moveTo(i,0);
+        ctx.lineTo(i,170);
+
+        ctx.stroke();
+
+
+        ctx.beginPath();
+
+        ctx.moveTo(0,i);
+        ctx.lineTo(170,i);
+
+        ctx.stroke();
+
+    }
+
+
+    if(!player)return;
+
+
+    const px=
+        85+
+        player.position.x/
+        1000*170;
+
+
+    const py=
+        85+
+        player.position.z/
+        1000*170;
+
+
+    ctx.fillStyle="white";
+
+    ctx.beginPath();
+
+    ctx.arc(
+        px,
+        py,
+        5,
+        0,
+        Math.PI*2
+    );
+
+    ctx.fill();
+
+
+    cars.slice(0,40)
+    .forEach(car=>{
+
+        const x=
+            85+
+            car.position.x/
+            1000*170;
+
+        const y=
+            85+
+            car.position.z/
+            1000*170;
+
+
+        ctx.fillStyle="orange";
+
+        ctx.fillRect(
+            x,
+            y,
+            3,
+            3
+        );
+
+    });
+
+
+    enemies.slice(0,30)
+    .forEach(e=>{
+
+        const x=
+            85+
+            e.position.x/
+            1000*170;
+
+        const y=
+            85+
+            e.position.z/
+            1000*170;
+
+
+        ctx.fillStyle="red";
+
+        ctx.fillRect(
+            x,
+            y,
+            3,
+            3
+        );
+
+    });
+
+}
+
+
+/* =====================================================
+                       HUD
+===================================================== */
+
+function updateHUD(){
+
+    document.getElementById(
+        "score"
+    ).textContent=
+        Math.floor(score);
+
+
+    document.getElementById(
+        "health"
+    ).textContent=
+        Math.max(
+            0,
+            Math.floor(health)
+        );
+
+
+    document.getElementById(
+        "level"
+    ).textContent=
+        level;
+
+}
+
+
+/* =====================================================
+                    SCORE
+===================================================== */
+
+function updateScore(){
+
+    score+=.03;
+
+    if(score>500){
+        level=2;
+    }
+
+    if(score>1500){
+        level=3;
+    }
+
+}
+
+
+/* =====================================================
+                    BACK MENU
+===================================================== */
+
+function backToMenu(){
+
+    running=false;
+
+    document.getElementById(
+        "hud"
+    ).style.display="none";
+
+    document.getElementById(
+        "menu"
+    ).style.display="block";
+
+}
+
+
+/* =====================================================
+                     RESIZE
+===================================================== */
+
+window.addEventListener(
+    "resize",
+    ()=>{
+
+        if(!camera || !renderer)
+            return;
+
+        camera.aspect=
+            innerWidth/innerHeight;
+
+        camera.updateProjectionMatrix();
+
+        renderer.setSize(
+            innerWidth,
+            innerHeight
+        );
+
+    }
+);
+
+
+/* =====================================================
+                      GAME LOOP
+===================================================== */
+
+function animate(){
+
+    requestAnimationFrame(
+        animate
+    );
+
+
+    if(running){
+
+        if(currentCar){
+            drive();
+        }else{
+            updatePlayer();
+        }
+
+
+        updateHumans();
+
+        updateEnemies();
+
+        updateCars();
+
+        updateCamera();
+
+        updateScore();
+
+        updateHUD();
+
+        updateMinimap();
+
+    }
+
+
+    if(renderer){
+
+        renderer.render(
+            scene,
+            camera
+        );
+
+    }
+
+}
+
+animate();
+
+</script>
+
+</body>
+</html>
+```
